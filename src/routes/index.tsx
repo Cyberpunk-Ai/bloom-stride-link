@@ -111,7 +111,7 @@ function CountUp({ to, suffix = "" }: { to: number; suffix?: string }) {
     const tick = (now: number) => {
       const p = Math.min((now - start) / duration, 1);
       const eased = 1 - Math.pow(1 - p, 3);
-      setValue(Math.round(to * eased));
+      setValue(Number.isInteger(to) ? Math.round(to * eased) : Math.round(to * eased * 10) / 10);
       if (p < 1) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -119,7 +119,7 @@ function CountUp({ to, suffix = "" }: { to: number; suffix?: string }) {
   }, [visible, to]);
   return (
     <span ref={ref}>
-      {value}
+      {Number.isInteger(to) ? value : value.toFixed(1)}
       {suffix}
     </span>
   );
@@ -518,7 +518,7 @@ function Hero() {
               ))}
             </div>
             <p className="text-sm text-gray-500">
-              Loved by <strong className="text-gray-900">2M+</strong> creators
+              Loved by <strong className="text-gray-900">4k+</strong> creators
             </p>
           </div>
         </Reveal>
@@ -593,7 +593,7 @@ function Features() {
               <div className={`${iconBox} mb-8 from-blue-500 to-cyan-500`}>
                 <Video className="h-6 w-6" />
               </div>
-              <h3 className="mb-4 text-2xl font-bold">Stories &amp; Reels</h3>
+              <h3 className="mb-4 text-2xl font-bold">Posts &amp; Stories</h3>
               <p className="text-gray-600">
                 Share fleeting moments or polished short-form video with cinematic editing tools
                 built right in.
@@ -866,10 +866,10 @@ function Testimonials() {
 
 function Stats() {
   const stats = [
-    { value: 25, suffix: "M+", label: "Active Users" },
-    { value: 180, suffix: "M", label: "Posts Shared Daily" },
-    { value: 140, suffix: "+", label: "Countries Covered" },
-    { value: 45, suffix: "M", label: "Creator Payouts", prefix: "$" },
+    { value: 10, suffix: "k+", label: "Paid Members" },
+    { value: 2.5, suffix: "k+", label: "Active Users" },
+    { value: 7.5, suffix: "k", label: "Posts Shared Daily" },
+    { value: 4, suffix: "k+", label: "Creators" },
   ];
   return (
     <section className="border-y border-gray-200 py-24">
