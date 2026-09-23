@@ -224,6 +224,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          parent_id: string | null
           post_id: string
           user_id: string
         }
@@ -231,6 +232,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          parent_id?: string | null
           post_id: string
           user_id: string
         }
@@ -238,10 +240,18 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          parent_id?: string | null
           post_id?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "comments_post_id_fkey"
             columns: ["post_id"]
@@ -528,6 +538,8 @@ export type Database = {
           actor_id: string | null
           body: string
           created_at: string
+          entity_id: string | null
+          entity_type: string | null
           id: string
           read: boolean
           recipient_id: string
@@ -537,6 +549,8 @@ export type Database = {
           actor_id?: string | null
           body: string
           created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
           id?: string
           read?: boolean
           recipient_id: string
@@ -546,6 +560,8 @@ export type Database = {
           actor_id?: string | null
           body?: string
           created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
           id?: string
           read?: boolean
           recipient_id?: string
@@ -1640,6 +1656,7 @@ export type Database = {
         Returns: boolean
       }
       owns_profile: { Args: { _profile_id: string }; Returns: boolean }
+      record_post_impression: { Args: { p_post_id: string }; Returns: number }
     }
     Enums: {
       app_role: "user" | "moderator" | "admin"
