@@ -1,0 +1,76 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1789486426347,
+      "tag": "0000_starpace_core_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789486472548,
+      "tag": "0001_starpace_grants_and_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789486633503,
+      "tag": "0002_media_bucket_policies",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789936613454,
+      "tag": "0003_starpace_core_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789936906702,
+      "tag": "0004_engagement_counter_triggers_and_realtime",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789937121401,
+      "tag": "0005_notification_targets",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790106131408,
+      "tag": "0006_record_post_impression_rpc",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790106178908,
+      "tag": "0007_fix_record_post_impression_profile_lookup",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790152520359,
+      "tag": "0008_story_visibility_follow_graph",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790152746986,
+      "tag": "0009_nested_comment_replies",
+      "breakpoints": true
+    }
+  ]
+}
