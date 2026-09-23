@@ -8,7 +8,7 @@ Verified by reading the code in the cloned repo:
 
 - **Secrets in the repo.** A `.env` file with live project URL and publishable keys is committed and is not listed in `.gitignore`. Payment keys are read from the server environment (good) but there is no documented env template.
 - **Landing page numbers and labels** are hardcoded and don't match what you want; the section is titled "Stories & Reels".
-- **Stories rail on the feed cannot be hidden** — it always renders and eats vertical space on small screens. The feed tabs ("For you / Following / Latest") are static, not scroll-aware.
+- **Stories preview  cannot be hidden** — it always renders and eats space on small screens it should be toggled. The feed tabs ("For you / Following / Latest") are static, not scroll-aware.
 - **Payments are half-finished.** Plan prices are hardcoded in code in KES with a hardcoded USD rate; tips are clamped to **$1 minimum**; the webhook settles charges and transfers but does not handle refunds/chargebacks, subscription renewal/expiry, or per-transaction platform fee records; there is no idempotency table, so a replayed webhook can double-insert a tip; no currency/minor-unit helper; `confirmPaystackPayment` trusts `metadata.plan` from the transaction.
 - **Withdrawals/payouts** exist but lack balance ledger integrity (available vs pending vs paid), minimum thresholds, KYC/recipient verification state, and reversal handling.
 - **Vendor lock-in.** Supabase, Lovable Cloud auth, Lovable AI gateway, Paystack and Supabase Storage are imported directly all over the app (`ai.functions.ts` hardcodes the gateway URL and model). There is no provider abstraction.
@@ -39,7 +39,8 @@ Verified by reading the code in the cloned repo:
 **Phase 8 — Messages, spaces, calls.** Production messaging (pagination, delivery/read state, attachments with validation, search, block/mute), spaces roles and moderation, and a complete call experience: ringing with timeout, accept/decline screen, missed-call records, reconnection, device switching, and working screen share to the peer.
 
 **Phase 9 — UX, responsiveness and the noted fixes.**
-- Stories preview toggle on the feed, remembered per user, collapsed by default on small screens.
+
+- Stories preview toggle on the story creation page, remembered per user, collapsed by default on small screens.
 - Landing page stats → 10k paid, 2.5k users, 7.5k posts shared daily, 4k creators; "Stories & Reels" → "Posts & Stories".
 - Home feed: smooth scrolling, and the "For you / Following / Latest" bar hides on scroll down and reappears on scroll up.
 - Mobile pass across feed, messages, spaces, admin and profile; safe-area insets, tap targets, reduced-motion support, focus states, skeletons and empty states.
@@ -57,4 +58,4 @@ Verified by reading the code in the cloned repo:
 
 - Message encryption is **at rest with a server-held key** (searchable, recoverable), not end-to-end — E2E would break search, moderation and multi-device history.
 - Paystack stays the default payment provider, with Stripe as a second adapter behind the abstraction.
-- Phases land incrementally so you can review after each.
+- Phases land all shiped we shall review after everything is done all phases
