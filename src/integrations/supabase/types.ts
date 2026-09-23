@@ -14,15 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_key_usage: {
+        Row: {
+          count: number
+          created_at: string
+          id: string
+          key_id: string
+          minute: string
+        }
+        Insert: {
+          count?: number
+          created_at?: string
+          id?: string
+          key_id: string
+          minute: string
+        }
+        Update: {
+          count?: number
+          created_at?: string
+          id?: string
+          key_id?: string
+          minute?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_key_usage_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       api_keys: {
         Row: {
           call_count: number
           created_at: string
+          expires_at: string | null
           id: string
           key_hash: string
+          last_ip: string | null
           last_used_at: string | null
           name: string
           prefix: string
+          rate_limit_per_min: number
           revoked: boolean
           scopes: Json
           user_id: string
@@ -30,11 +65,14 @@ export type Database = {
         Insert: {
           call_count?: number
           created_at?: string
+          expires_at?: string | null
           id?: string
           key_hash: string
+          last_ip?: string | null
           last_used_at?: string | null
           name: string
           prefix: string
+          rate_limit_per_min?: number
           revoked?: boolean
           scopes?: Json
           user_id: string
@@ -42,11 +80,14 @@ export type Database = {
         Update: {
           call_count?: number
           created_at?: string
+          expires_at?: string | null
           id?: string
           key_hash?: string
+          last_ip?: string | null
           last_used_at?: string | null
           name?: string
           prefix?: string
+          rate_limit_per_min?: number
           revoked?: boolean
           scopes?: Json
           user_id?: string
@@ -102,6 +143,45 @@ export type Database = {
           target_type?: string
         }
         Relationships: []
+      }
+      author_affinity: {
+        Row: {
+          author_id: string
+          interactions: number
+          score: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          author_id: string
+          interactions?: number
+          score?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          author_id?: string
+          interactions?: number
+          score?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "author_affinity_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "author_affinity_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       bookmarks: {
         Row: {
@@ -168,15 +248,74 @@ export type Database = {
           },
         ]
       }
+      call_signals: {
+        Row: {
+          call_id: string
+          consumed: boolean
+          created_at: string
+          from_id: string
+          id: string
+          kind: string
+          payload: Json
+          to_id: string
+        }
+        Insert: {
+          call_id: string
+          consumed?: boolean
+          created_at?: string
+          from_id: string
+          id?: string
+          kind: string
+          payload?: Json
+          to_id: string
+        }
+        Update: {
+          call_id?: string
+          consumed?: boolean
+          created_at?: string
+          from_id?: string
+          id?: string
+          kind?: string
+          payload?: Json
+          to_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_signals_call_id_fkey"
+            columns: ["call_id"]
+            isOneToOne: false
+            referencedRelation: "calls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_signals_from_id_fkey"
+            columns: ["from_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_signals_to_id_fkey"
+            columns: ["to_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calls: {
         Row: {
           answered_at: string | null
           callee_id: string
           caller_id: string
+          decline_reason: string | null
           duration_seconds: number
           ended_at: string | null
           id: string
           kind: string
+          missed: boolean
+          ring_expires_at: string | null
+          screen_shared: boolean
           started_at: string
           status: string
         }
@@ -184,10 +323,14 @@ export type Database = {
           answered_at?: string | null
           callee_id: string
           caller_id: string
+          decline_reason?: string | null
           duration_seconds?: number
           ended_at?: string | null
           id?: string
           kind?: string
+          missed?: boolean
+          ring_expires_at?: string | null
+          screen_shared?: boolean
           started_at?: string
           status?: string
         }
@@ -195,10 +338,14 @@ export type Database = {
           answered_at?: string | null
           callee_id?: string
           caller_id?: string
+          decline_reason?: string | null
           duration_seconds?: number
           ended_at?: string | null
           id?: string
           kind?: string
+          missed?: boolean
+          ring_expires_at?: string | null
+          screen_shared?: boolean
           started_at?: string
           status?: string
         }
@@ -310,6 +457,30 @@ export type Database = {
           },
         ]
       }
+      feature_flags: {
+        Row: {
+          description: string
+          enabled: boolean
+          key: string
+          rollout: number
+          updated_at: string
+        }
+        Insert: {
+          description?: string
+          enabled?: boolean
+          key: string
+          rollout?: number
+          updated_at?: string
+        }
+        Update: {
+          description?: string
+          enabled?: boolean
+          key?: string
+          rollout?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       feed_preferences: {
         Row: {
           prefs: Json
@@ -363,6 +534,59 @@ export type Database = {
           {
             foreignKeyName: "follows_target_id_fkey"
             columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ledger_entries: {
+        Row: {
+          amount_minor: number
+          created_at: string
+          currency: string
+          direction: string
+          id: string
+          kind: string
+          memo: string | null
+          reference: string | null
+          source_id: string | null
+          source_type: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount_minor: number
+          created_at?: string
+          currency?: string
+          direction: string
+          id?: string
+          kind: string
+          memo?: string | null
+          reference?: string | null
+          source_id?: string | null
+          source_type?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount_minor?: number
+          created_at?: string
+          currency?: string
+          direction?: string
+          id?: string
+          kind?: string
+          memo?: string | null
+          reference?: string | null
+          source_id?: string | null
+          source_type?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ledger_entries_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -440,27 +664,48 @@ export type Database = {
       }
       messages: {
         Row: {
+          attachments: Json
           body: string
+          body_cipher: string | null
+          body_nonce: string | null
           conversation_id: string
           created_at: string
+          deleted_at: string | null
+          delivered_at: string | null
+          edited_at: string | null
+          enc_version: number
           id: string
           media_url: string | null
           read_at: string | null
           sender_id: string
         }
         Insert: {
+          attachments?: Json
           body: string
+          body_cipher?: string | null
+          body_nonce?: string | null
           conversation_id: string
           created_at?: string
+          deleted_at?: string | null
+          delivered_at?: string | null
+          edited_at?: string | null
+          enc_version?: number
           id?: string
           media_url?: string | null
           read_at?: string | null
           sender_id: string
         }
         Update: {
+          attachments?: Json
           body?: string
+          body_cipher?: string | null
+          body_nonce?: string | null
           conversation_id?: string
           created_at?: string
+          deleted_at?: string | null
+          delivered_at?: string | null
+          edited_at?: string | null
+          enc_version?: number
           id?: string
           media_url?: string | null
           read_at?: string | null
@@ -587,6 +832,7 @@ export type Database = {
       payments: {
         Row: {
           amount: number
+          amount_minor: number | null
           authorization_url: string | null
           billing_cycle: string
           created_at: string
@@ -595,15 +841,18 @@ export type Database = {
           id: string
           paid_at: string | null
           plan: string
+          platform_fee_minor: number
           provider: string
           raw: Json
           reference: string
+          refunded_minor: number
           status: string
           updated_at: string
           user_id: string
         }
         Insert: {
           amount: number
+          amount_minor?: number | null
           authorization_url?: string | null
           billing_cycle?: string
           created_at?: string
@@ -612,15 +861,18 @@ export type Database = {
           id?: string
           paid_at?: string | null
           plan: string
+          platform_fee_minor?: number
           provider?: string
           raw?: Json
           reference: string
+          refunded_minor?: number
           status?: string
           updated_at?: string
           user_id: string
         }
         Update: {
           amount?: number
+          amount_minor?: number | null
           authorization_url?: string | null
           billing_cycle?: string
           created_at?: string
@@ -629,9 +881,11 @@ export type Database = {
           id?: string
           paid_at?: string | null
           plan?: string
+          platform_fee_minor?: number
           provider?: string
           raw?: Json
           reference?: string
+          refunded_minor?: number
           status?: string
           updated_at?: string
           user_id?: string
@@ -649,14 +903,20 @@ export type Database = {
       payouts: {
         Row: {
           amount: number
+          amount_minor: number | null
           created_at: string
           currency: string
           destination: string | null
           failure_reason: string | null
+          fee_minor: number
           id: string
+          kyc_status: string
           method: string
+          processed_at: string | null
           recipient_code: string | null
           reference: string | null
+          requested_at: string
+          reversal_of: string | null
           status: string
           transfer_code: string | null
           updated_at: string
@@ -664,14 +924,20 @@ export type Database = {
         }
         Insert: {
           amount: number
+          amount_minor?: number | null
           created_at?: string
           currency?: string
           destination?: string | null
           failure_reason?: string | null
+          fee_minor?: number
           id?: string
+          kyc_status?: string
           method?: string
+          processed_at?: string | null
           recipient_code?: string | null
           reference?: string | null
+          requested_at?: string
+          reversal_of?: string | null
           status?: string
           transfer_code?: string | null
           updated_at?: string
@@ -679,20 +945,33 @@ export type Database = {
         }
         Update: {
           amount?: number
+          amount_minor?: number | null
           created_at?: string
           currency?: string
           destination?: string | null
           failure_reason?: string | null
+          fee_minor?: number
           id?: string
+          kyc_status?: string
           method?: string
+          processed_at?: string | null
           recipient_code?: string | null
           reference?: string | null
+          requested_at?: string
+          reversal_of?: string | null
           status?: string
           transfer_code?: string | null
           updated_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "payouts_reversal_of_fkey"
+            columns: ["reversal_of"]
+            isOneToOne: false
+            referencedRelation: "payouts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payouts_user_id_fkey"
             columns: ["user_id"]
@@ -767,6 +1046,52 @@ export type Database = {
           },
           {
             foreignKeyName: "post_impressions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_not_interested: {
+        Row: {
+          author_id: string | null
+          created_at: string
+          id: string
+          post_id: string | null
+          user_id: string
+        }
+        Insert: {
+          author_id?: string | null
+          created_at?: string
+          id?: string
+          post_id?: string | null
+          user_id: string
+        }
+        Update: {
+          author_id?: string | null
+          created_at?: string
+          id?: string
+          post_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_not_interested_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_not_interested_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_not_interested_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -887,6 +1212,36 @@ export type Database = {
           verified?: boolean
           warning_count?: number
           website?: string
+        }
+        Relationships: []
+      }
+      provider_events: {
+        Row: {
+          created_at: string
+          event_id: string
+          event_type: string
+          id: string
+          payload: Json
+          processed_at: string | null
+          provider: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          event_type: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          provider: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          event_type?: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          provider?: string
         }
         Relationships: []
       }
@@ -1357,6 +1712,61 @@ export type Database = {
           },
         ]
       }
+      suspension_appeals: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          reviewed_by: string | null
+          status: string
+          suspension_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          id?: string
+          reviewed_by?: string | null
+          status?: string
+          suspension_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          reviewed_by?: string | null
+          status?: string
+          suspension_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suspension_appeals_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suspension_appeals_suspension_id_fkey"
+            columns: ["suspension_id"]
+            isOneToOne: false
+            referencedRelation: "user_suspensions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suspension_appeals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_settings: {
         Row: {
           ai_generation_enabled: boolean
@@ -1402,32 +1812,47 @@ export type Database = {
       tips: {
         Row: {
           amount: number
+          amount_minor: number | null
           created_at: string
           currency: string
+          fee_minor: number
           from_user_id: string
           id: string
           message: string
+          net_minor: number | null
           post_id: string | null
+          reference: string | null
+          status: string
           to_user_id: string
         }
         Insert: {
           amount: number
+          amount_minor?: number | null
           created_at?: string
           currency?: string
+          fee_minor?: number
           from_user_id: string
           id?: string
           message?: string
+          net_minor?: number | null
           post_id?: string | null
+          reference?: string | null
+          status?: string
           to_user_id: string
         }
         Update: {
           amount?: number
+          amount_minor?: number | null
           created_at?: string
           currency?: string
+          fee_minor?: number
           from_user_id?: string
           id?: string
           message?: string
+          net_minor?: number | null
           post_id?: string | null
+          reference?: string | null
+          status?: string
           to_user_id?: string
         }
         Relationships: [
@@ -1448,6 +1873,72 @@ export type Database = {
           {
             foreignKeyName: "tips_to_user_id_fkey"
             columns: ["to_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_blocks: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_blocks_blocked_id_fkey"
+            columns: ["blocked_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_blocks_blocker_id_fkey"
+            columns: ["blocker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_mutes: {
+        Row: {
+          created_at: string
+          muted_id: string
+          muter_id: string
+        }
+        Insert: {
+          created_at?: string
+          muted_id: string
+          muter_id: string
+        }
+        Update: {
+          created_at?: string
+          muted_id?: string
+          muter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_mutes_muted_id_fkey"
+            columns: ["muted_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_mutes_muter_id_fkey"
+            columns: ["muter_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1513,12 +2004,101 @@ export type Database = {
         }
         Relationships: []
       }
+      user_suspensions: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          lifted_at: string | null
+          reason: string
+          until: string | null
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lifted_at?: string | null
+          reason?: string
+          until?: string | null
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lifted_at?: string | null
+          reason?: string
+          until?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_suspensions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_suspensions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhook_deliveries: {
+        Row: {
+          created_at: string
+          error: string | null
+          event: string
+          id: string
+          ok: boolean
+          status_code: number | null
+          webhook_id: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          event: string
+          id?: string
+          ok?: boolean
+          status_code?: number | null
+          webhook_id: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          event?: string
+          id?: string
+          ok?: boolean
+          status_code?: number | null
+          webhook_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_deliveries_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "webhooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       webhooks: {
         Row: {
           active: boolean
           created_at: string
           events: Json
+          failure_count: number
           id: string
+          last_delivery_at: string | null
+          secret: string | null
           url: string
           user_id: string
         }
@@ -1526,7 +2106,10 @@ export type Database = {
           active?: boolean
           created_at?: string
           events?: Json
+          failure_count?: number
           id?: string
+          last_delivery_at?: string | null
+          secret?: string | null
           url: string
           user_id: string
         }
@@ -1534,7 +2117,10 @@ export type Database = {
           active?: boolean
           created_at?: string
           events?: Json
+          failure_count?: number
           id?: string
+          last_delivery_at?: string | null
+          secret?: string | null
           url?: string
           user_id?: string
         }
@@ -1552,8 +2138,14 @@ export type Database = {
         Row: {
           created_at: string
           email: string
+          expires_at: string | null
           id: string
+          invite_token: string | null
+          invited_at: string
+          invited_by: string | null
           name: string
+          permissions: Json
+          responded_at: string | null
           role: string
           status: string
           user_id: string | null
@@ -1562,8 +2154,14 @@ export type Database = {
         Insert: {
           created_at?: string
           email: string
+          expires_at?: string | null
           id?: string
+          invite_token?: string | null
+          invited_at?: string
+          invited_by?: string | null
           name?: string
+          permissions?: Json
+          responded_at?: string | null
           role?: string
           status?: string
           user_id?: string | null
@@ -1572,14 +2170,27 @@ export type Database = {
         Update: {
           created_at?: string
           email?: string
+          expires_at?: string | null
           id?: string
+          invite_token?: string | null
+          invited_at?: string
+          invited_by?: string | null
           name?: string
+          permissions?: Json
+          responded_at?: string | null
           role?: string
           status?: string
           user_id?: string | null
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "workspace_members_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "workspace_members_user_id_fkey"
             columns: ["user_id"]
