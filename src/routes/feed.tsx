@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Sparkles, RefreshCw, Loader2, Plus, Sparkle, ArrowUp, Compass } from "lucide-react";
+import { Sparkles, RefreshCw, Loader2, Plus, Sparkle, ArrowUp, Compass, ChevronDown, ChevronUp } from "lucide-react";
 import { AppShell, Panel } from "@/components/social/AppShell";
 import { Composer } from "@/components/social/Composer";
 import { PostCard } from "@/components/social/PostCard";
@@ -15,6 +15,7 @@ import { currentUser, getProfile } from "@/lib/profile-service";
 import { getPosts, getStories } from "@/lib/api-client";
 import { useRealtime } from "@/lib/realtime";
 import { useAuth } from "@/lib/auth-state";
+import { useStoriesVisibility } from "@/lib/stories-visibility";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -46,9 +47,10 @@ interface StoriesBarProps {
   stories: Story[];
   onOpenStory: (storyIndex: number) => void;
   onOpenCreator: () => void;
+  onToggleVisible?: () => void;
 }
 
-function StoriesBar({ stories, onOpenStory, onOpenCreator }: StoriesBarProps) {
+function StoriesBar({ stories, onOpenStory, onOpenCreator, onToggleVisible }: StoriesBarProps) {
   const { user } = useAuth();
   const activeUser = user || currentUser;
   const myStories = stories.filter((s) => s.user_id === activeUser.id);
@@ -82,13 +84,25 @@ function StoriesBar({ stories, onOpenStory, onOpenCreator }: StoriesBarProps) {
             {stories.length} active
           </span>
         </div>
-        <button
-          onClick={onOpenCreator}
-          className="flex items-center gap-1 text-xs font-bold text-brand hover:text-brand-pink transition-colors"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          <span>Add Story</span>
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onOpenCreator}
+            className="flex min-h-[40px] items-center gap-1 rounded-full px-2 text-xs font-bold text-brand transition-colors hover:text-brand-pink"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>Add Story</span>
+          </button>
+          {onToggleVisible ? (
+            <button
+              onClick={onToggleVisible}
+              aria-expanded="true"
+              className="flex min-h-[40px] min-w-[40px] items-center justify-center gap-1 rounded-full px-2 text-xs font-bold text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
+            >
+              <ChevronUp className="h-4 w-4" />
+              <span className="hidden sm:inline">Hide stories</span>
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-1 pt-1 [scrollbar-width:none] touch-pan-x">
