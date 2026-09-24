@@ -56,93 +56,39 @@ export const Route = createFileRoute("/api/public/paystack/webhook")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const admin = supabaseAdmin as any;
 
+        // Idempotency: every provider event is processed at most once.
+        const eventId = `${event}:${tx.reference ?? tx.transfer_code ?? ""}:${(tx as any).id ?? ""}`;
+        const { error: dupErr } = await admin
+          .from("provider_events")
+          .insert({ provider: "paystack", event_id: eventId, event_type: event, payload: payload as any });
+        if (dupErr) return new Response("ok"); // already seen
+
         // ---- payouts (transfers) ----
         if (event.startsWith("transfer.")) {
-          const status =
-            event === "transfer.success"
-              ? "paid"
-              : event === "transfer.reversed"
-                ? "reversed"
-                : "failed";
+          const status = event === "transfer.success" ? "paid" : event === "transfer.reversed" ? "reversed" : "failed";
           if (tx.transfer_code) {
-            await admin
-              .from("payouts")
-              .update({
-                status,
-                ...(status === "failed" ? { failure_reason: tx.reason ?? "Transfer failed" } : {}),
-              })
-              .eq("transfer_code", tx.transfer_code);
+            await admin.from("payouts").update({
+              status,
+              processed_at: new Date().toISOString(),
+              ...(status === "failed" ? { failure_reason: tx.reason ?? "Transfer failed" } : {}),
+            }).eq("transfer_code", tx.transfer_code);
           }
-          return new Response("ok");
+        } else if (event === "refund.processed" || event === "charge.dispute.create") {
+          const ref = String((tx as any).transaction_reference ?? (tx as any).transaction?.reference ?? tx.reference ?? "");
+          if (ref) {
+            const { reverseCharge } = await import("@/lib/payments-settle.server");
+            await reverseCharge(admin, ref, Number((tx as any).amount) || null, event === "refund.processed" ? "refunded" : "disputed");
+          }
+        } else if (event === "subscription.disable" || event === "subscription.not_renew") {
+          const code = tx.customer?.customer_code;
+          if (code) await admin.from("subscriptions").update({ status: "canceled" }).eq("provider_customer_id", code);
+        } else if (event === "charge.success" && tx.status === "success" && tx.reference) {
+          const { settleSuccessfulCharge } = await import("@/lib/payments-settle.server");
+          await settleSuccessfulCharge(admin, tx);
         }
 
-        // ---- charges ----
-        if (!tx.reference) return new Response("ok");
-
-        const succeeded = event === "charge.success" && tx.status === "success";
-
-        const { data: payment } = await admin
-          .from("payments")
-          .select("id, user_id, plan, billing_cycle, status, raw")
-          .eq("reference", tx.reference)
-          .maybeSingle();
-
-        if (!payment) return new Response("ok");
-        if (payment.status === "success") return new Response("ok"); // already settled
-
-        await admin
-          .from("payments")
-          .update({
-            status: succeeded ? "success" : (tx.status ?? "failed"),
-            raw: tx as Record<string, unknown>,
-            paid_at: succeeded ? (tx.paid_at ?? new Date().toISOString()) : null,
-          })
-          .eq("reference", tx.reference);
-
-        if (!succeeded) return new Response("ok");
-
-        const meta = (tx.metadata ?? {}) as Record<string, any>;
-        const isTip = meta.kind === "tip" || String(tx.reference).startsWith("tip_");
-
-        if (isTip) {
-          if (meta.recipient_id) {
-            await admin.from("tips").insert({
-              from_user_id: payment.user_id,
-              to_user_id: meta.recipient_id,
-              amount: Number(meta.tip_usd ?? 0),
-              message: String(meta.note ?? "").slice(0, 240),
-              post_id: meta.post_id ?? null,
-            });
-            await admin.from("notifications").insert({
-              recipient_id: meta.recipient_id,
-              actor_id: payment.user_id,
-              type: "tip",
-              body: `sent you a $${Number(meta.tip_usd ?? 0)} tip`,
-            });
-          }
-          return new Response("ok");
-        }
-
-        const plan = String(meta.plan ?? payment.plan ?? "plus");
-        const cycle = String(meta.billing_cycle ?? payment.billing_cycle ?? "monthly");
-
-        await admin.from("profiles").update({ plan }).eq("id", payment.user_id);
-        await admin.from("subscriptions").upsert(
-          {
-            user_id: payment.user_id,
-            plan,
-            billing_cycle: cycle,
-            status: "active",
-            provider: "paystack",
-            provider_customer_id: tx.customer?.customer_code ?? null,
-            renews_at: new Date(
-              Date.now() + (cycle === "annual" ? 365 : 30) * 86400000,
-            ).toISOString(),
-            payment_method: tx.authorization ?? {},
-          },
-          { onConflict: "user_id" },
-        );
-
+        await admin.from("provider_events").update({ processed_at: new Date().toISOString() })
+          .eq("provider", "paystack").eq("event_id", eventId);
         return new Response("ok");
       },
     },

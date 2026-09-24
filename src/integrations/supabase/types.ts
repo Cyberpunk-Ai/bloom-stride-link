@@ -2253,7 +2253,30 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bump_author_affinity: {
+        Args: { p_author_id: string; p_delta: number; p_user_id: string }
+        Returns: undefined
+      }
       current_profile_id: { Args: never; Returns: string }
+      get_for_you_feed: {
+        Args: {
+          p_author_cap?: number
+          p_candidate_pool?: number
+          p_cursor_id?: string
+          p_cursor_score?: number
+          p_halflife_hours?: number
+          p_limit?: number
+          p_user_id: string
+          p_w_affinity?: number
+          p_w_engagement?: number
+          p_w_follow?: number
+          p_w_recency?: number
+        }
+        Returns: {
+          post_id: string
+          score: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2268,6 +2291,10 @@ export type Database = {
       }
       owns_profile: { Args: { _profile_id: string }; Returns: boolean }
       record_post_impression: { Args: { p_post_id: string }; Returns: number }
+      record_post_impressions_batch: {
+        Args: { p_post_ids: string[] }
+        Returns: number
+      }
     }
     Enums: {
       app_role: "user" | "moderator" | "admin"

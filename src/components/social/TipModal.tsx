@@ -25,7 +25,7 @@ interface TipModalProps {
   spaceId?: string;
 }
 
-const PRESET_AMOUNTS = [2, 5, 10, 25, 50];
+const PRESET_AMOUNTS = [0.5, 1, 5, 10, 25];
 
 export function TipModal({ isOpen, onClose, recipient, postId }: TipModalProps) {
   const { user } = useAuth();
@@ -280,8 +280,8 @@ export function TipModal({ isOpen, onClose, recipient, postId }: TipModalProps) 
                 </div>
                 <input
                   type="number"
-                  step="1"
-                  min="1"
+                  step="0.01"
+                  min="0.1"
                   max="1000"
                   placeholder="Custom amount"
                   value={customAmount}

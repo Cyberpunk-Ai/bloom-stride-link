@@ -5,23 +5,31 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 type PlanTier = "plus" | "pro";
 type BillingCycle = "monthly" | "annual";
 
-/**
- * Prices are advertised in USD but the merchant account settles in KES, so we
- * charge the KES equivalent. Values are whole shillings; the handler converts
- * them to the smallest unit (cents) that Paystack expects.
- */
-const PRICES: Record<PlanTier, Record<BillingCycle, number>> = {
+/** Plan prices in whole units of PAYMENTS_CURRENCY, overridable per env (e.g. PRICE_PLUS_MONTHLY). */
+const DEFAULT_PRICES: Record<PlanTier, Record<BillingCycle, number>> = {
   plus: { monthly: 1170, annual: 10920 },
   pro: { monthly: 3770, annual: 35880 },
 };
 
-/** USD is what we advertise; the merchant account settles in KES. */
-const USD_TO_KES = Number(process.env["PAYSTACK_USD_RATE"] ?? 130);
-
 function money(plan: PlanTier, cycle: BillingCycle) {
-  return PRICES[plan][cycle];
+  const v = Number(process.env[`PRICE_${plan.toUpperCase()}_${cycle.toUpperCase()}`]);
+  return Number.isFinite(v) && v > 0 ? v : DEFAULT_PRICES[plan][cycle];
 }
 
+function chargeCurrency() {
+  return process.env["PAYMENTS_CURRENCY"] || process.env["PAYSTACK_CURRENCY"] || "KES";
+}
+
+/** How many units of the charge currency equal one USD. */
+function usdRate() {
+  const v = Number(process.env["PAYMENTS_USD_RATE"] ?? process.env["PAYSTACK_USD_RATE"] ?? 130);
+  return Number.isFinite(v) && v > 0 ? v : 130;
+}
+
+function minTipUsd() {
+  const v = Number(process.env["PAYMENTS_MIN_TIP_USD"] ?? 0.1);
+  return Number.isFinite(v) && v > 0 ? v : 0.1;
+}
 
 function paystackKey() {
   const key = process.env["PAYSTACK_SECRET_KEY"];
@@ -64,7 +72,7 @@ export const startPaystackCheckout = createServerFn({ method: "POST" })
     if (!profile) throw new Error("Complete your profile before upgrading.");
 
     const email = claims?.email ?? `${profile.id}@users.noreply.app`;
-    const currency = process.env["PAYSTACK_CURRENCY"] || "KES";
+    const currency = chargeCurrency();
     const amount = money(data.plan, data.cycle) * 100;
     const reference = `sub_${crypto.randomUUID().replace(/-/g, "")}`;
 
@@ -118,8 +126,8 @@ export const startTipCheckout = createServerFn({ method: "POST" })
       origin: string;
     }) => {
       const amount = Number(input.amount);
-      if (!Number.isFinite(amount) || amount < 1 || amount > 1000) {
-        throw new Error("Tip amount must be between $1 and $1000.");
+      if (!Number.isFinite(amount) || amount < 0.01 || amount > 1000) {
+        throw new Error("Tip amount must be between $0.01 and $1000.");
       }
       if (!input.recipientUsername) throw new Error("Pick someone to tip.");
       if (!/^https?:\/\//.test(input.origin)) throw new Error("Invalid origin");
@@ -149,8 +157,10 @@ export const startTipCheckout = createServerFn({ method: "POST" })
     if (recipientId === myProfileId) throw new Error("You can't tip yourself.");
 
     const email = claims?.email ?? `${myProfileId}@users.noreply.app`;
-    const currency = process.env["PAYSTACK_CURRENCY"] || "KES";
-    const amount = Math.round(data.amount * USD_TO_KES) * 100;
+    const currency = chargeCurrency();
+    if (data.amount < minTipUsd()) throw new Error(`The smallest tip is $${minTipUsd()}.`);
+    // Exact minor units (cents) so sub-dollar tips are charged precisely.
+    const amount = Math.max(1, Math.round(data.amount * usdRate() * 100));
     const reference = `tip_${crypto.randomUUID().replace(/-/g, "")}`;
 
     const init = await paystack("/transaction/initialize", {
@@ -241,45 +251,19 @@ export const confirmPaystackPayment = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
 
-    // The webhook may already have settled this reference; don't record it twice.
-    const { data: existing } = await admin
-      .from("payments")
-      .select("status")
-      .eq("reference", data.reference)
-      .maybeSingle();
-    const alreadySettled = existing?.status === "success";
-
-    await admin
-      .from("payments")
-      .update({
-        status: success ? "success" : (tx.status ?? "failed"),
-        raw: tx,
-        paid_at: success ? (tx.paid_at ?? new Date().toISOString()) : null,
-      })
-      .eq("reference", data.reference);
-
     if (!success) {
+      await admin.from("payments").update({ status: tx.status ?? "failed", raw: tx })
+        .eq("reference", data.reference).neq("status", "success");
       return { status: tx.status ?? "failed", kind: isTip ? "tip" : "plan", plan, cycle };
     }
 
-    if (isTip) {
-      if (!alreadySettled && meta.recipient_id) {
-        const { error: tipErr } = await admin.from("tips").insert({
-          from_user_id: profileId,
-          to_user_id: meta.recipient_id,
-          amount: meta.tip_usd,
-          message: meta.note ?? "",
-          post_id: meta.post_id ?? null,
-        });
-        if (tipErr) console.error("Tip recording failed:", tipErr);
-        await admin.from("notifications").insert({
-          recipient_id: meta.recipient_id,
-          actor_id: profileId,
-          type: "tip",
-          body: `sent you a $${Number(meta.tip_usd ?? 0)} tip`,
-        });
-      }
+    const { settleSuccessfulCharge } = await import("@/lib/payments-settle.server");
+    const result = await settleSuccessfulCharge(admin, tx);
+    if (!result.settled && result.reason !== "already-settled") {
+      throw new Error("We couldn't match that payment to your order. Please contact support.");
+    }
 
+    if (isTip) {
       return {
         status: "success" as const,
         kind: "tip" as const,
@@ -289,36 +273,6 @@ export const confirmPaystackPayment = createServerFn({ method: "POST" })
         amount: Number(meta.tip_usd ?? 0),
       };
     }
-
-    const { error: planErr } = await admin.from("profiles").update({ plan }).eq("id", profileId);
-    const { error: subErr } = await admin.from("subscriptions").upsert(
-      {
-        user_id: profileId,
-        plan,
-        billing_cycle: cycle,
-        status: "active",
-        provider: "paystack",
-        provider_customer_id: tx.customer?.customer_code ?? null,
-        renews_at: new Date(
-          Date.now() + (cycle === "annual" ? 365 : 30) * 86400000,
-        ).toISOString(),
-        payment_method: tx.authorization
-          ? {
-              brand: tx.authorization.card_type ?? tx.authorization.channel ?? "card",
-              last4: tx.authorization.last4 ?? "",
-              exp: `${tx.authorization.exp_month ?? ""}/${tx.authorization.exp_year ?? ""}`,
-            }
-          : {},
-      },
-      { onConflict: "user_id" },
-    );
-    if (planErr || subErr) {
-      console.error("Plan activation failed:", planErr ?? subErr);
-      throw new Error(
-        "Your payment went through but we couldn't activate the plan. Please contact support — nothing else was charged.",
-      );
-    }
-
     return { status: "success" as const, kind: "plan" as const, plan, cycle };
   });
 
