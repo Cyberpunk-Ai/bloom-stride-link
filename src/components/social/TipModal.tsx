@@ -280,8 +280,8 @@ export function TipModal({ isOpen, onClose, recipient, postId }: TipModalProps) 
                 </div>
                 <input
                   type="number"
-                  step="1"
-                  min="1"
+                  step="0.01"
+                  min="0.1"
                   max="1000"
                   placeholder="Custom amount"
                   value={customAmount}
