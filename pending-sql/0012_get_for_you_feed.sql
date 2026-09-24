@@ -60,6 +60,7 @@ as $$
     select p.*
     from public.posts p
     where p.hidden = false
+      and (p_user_id is null or p_user_id = public.current_profile_id())
       and not exists (select 1 from excluded_posts e where e.post_id = p.id)
       and not exists (select 1 from excluded_authors e where e.author_id = p.user_id)
     order by p.created_at desc

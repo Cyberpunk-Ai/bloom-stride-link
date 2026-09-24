@@ -14,7 +14,8 @@ security definer
 set search_path = public
 as $$
 begin
-  if p_user_id is null or p_author_id is null or p_user_id = p_author_id then
+  if p_user_id is null or p_author_id is null or p_user_id = p_author_id
+     or p_user_id is distinct from public.current_profile_id() then
     return;
   end if;
 
