@@ -25,7 +25,7 @@ interface TipModalProps {
   spaceId?: string;
 }
 
-const PRESET_AMOUNTS = [2, 5, 10, 25, 50];
+const PRESET_AMOUNTS = [0.5, 1, 5, 10, 25];
 
 export function TipModal({ isOpen, onClose, recipient, postId }: TipModalProps) {
   const { user } = useAuth();
