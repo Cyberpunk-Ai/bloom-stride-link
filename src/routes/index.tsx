@@ -879,7 +879,7 @@ function Stats() {
             <div key={s.label}>
               <p className="mb-2 text-5xl font-extrabold md:text-6xl">
                 <span className="gradient-text">
-                  {s.prefix}
+                  
                   <CountUp to={s.value} suffix={s.suffix} />
                 </span>
               </p>
